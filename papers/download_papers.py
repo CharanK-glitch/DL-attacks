@@ -3,14 +3,19 @@ import urllib.request
 
 # CORE A* and A Top-Tier Conference Papers
 TOP_TIER_PAPERS = {
+    "AStar_IEEE_SP23_DL_SCA_Benchmark_Survey.pdf": "https://eprint.iacr.org/2023/245.pdf",
     "AStar_USENIX21_Leaky_DNNs_Microarchitectural_SCA.pdf": "https://www.usenix.org/system/files/sec21-xiang.pdf",
-    "AStar_IEEE_SP21_Mind_The_Gap_DL_SCA.pdf": "https://eprint.iacr.org/2021/412.pdf",
     "AStar_ACM_CCS20_DeepKey_Microarchitectural_KeyExtraction.pdf": "https://eprint.iacr.org/2020/1218.pdf",
     "AStar_NDSS22_DeepLeakage_KeyExtraction_Hardware.pdf": "https://eprint.iacr.org/2022/194.pdf",
+    "AStar_USENIX20_High_Precision_SCA_ResNet.pdf": "https://eprint.iacr.org/2020/1389.pdf",
+    "AStar_ACM_CCS22_SCA_DNN_Activations_Secrets.pdf": "https://eprint.iacr.org/2022/1410.pdf",
     "AStar_MICRO20_SubZero_Microarchitectural_SCA_NN.pdf": "https://arxiv.org/pdf/2009.08053.pdf",
     "AStar_ISCA21_Hermes_Microarchitectural_Attack_DL.pdf": "https://arxiv.org/pdf/2104.09012.pdf",
+    "AStar_ASPLOS22_Microarchitectural_Key_Leakage_DL.pdf": "https://eprint.iacr.org/2022/815.pdf",
     "CHES18_ASCAD_Study_DL_SCA_Prouff.pdf": "https://eprint.iacr.org/2018/053.pdf",
-    "CHES20_Methodology_Efficient_CNN_SCA_Zaid.pdf": "https://eprint.iacr.org/2019/1078.pdf"
+    "CHES20_Methodology_Efficient_CNN_SCA_Zaid.pdf": "https://eprint.iacr.org/2019/1078.pdf",
+    "CHES21_DL_SCA_Protected_RSA_ECC_Weissbart.pdf": "https://eprint.iacr.org/2021/620.pdf",
+    "CHES22_Attention_DL_SCA_Key_Recovery_Perin.pdf": "https://eprint.iacr.org/2022/740.pdf"
 }
 
 def download_top_tier_papers():
@@ -22,6 +27,10 @@ def download_top_tier_papers():
     print(f"[*] Downloading {len(TOP_TIER_PAPERS)} top-tier (A* / A) research papers...")
     for filename, url in TOP_TIER_PAPERS.items():
         filepath = os.path.join(save_dir, filename)
+        if os.path.exists(filepath):
+            print(f"[=] Already downloaded: {filename}")
+            continue
+
         print(f"[*] Fetching {filename} from {url}...")
         try:
             req = urllib.request.Request(url, headers=headers)
@@ -31,7 +40,7 @@ def download_top_tier_papers():
         except Exception as e:
             print(f"[!] Failed to download {filename}: {e}")
 
-    print(f"\n[+] All A* / A papers successfully downloaded into {save_dir}")
+    print(f"\n[+] All {len(TOP_TIER_PAPERS)} A* / A papers processed in {save_dir}")
 
 if __name__ == "__main__":
     download_top_tier_papers()
