@@ -10,7 +10,11 @@ from utils.visualization import (
     plot_adversarial_examples,
     plot_accuracy_vs_epsilon,
     plot_adversarial_grid,
-    plot_confidence_bar
+    plot_confidence_bar,
+    plot_confusion_matrix,
+    plot_per_class_accuracy,
+    plot_loss_histogram,
+    plot_perturbation_norms
 )
 import os
 
@@ -46,7 +50,7 @@ def run_experiment():
 
     print("[*] Loading CIFAR-10 test dataset...")
     test_dataset = datasets.CIFAR10(root='./data', train=False, download=True, transform=transform)
-    test_loader = DataLoader(test_dataset, batch_size=32, shuffle=True)
+    test_loader = DataLoader(test_dataset, batch_size=64, shuffle=True)
 
     # CIFAR-10 Class Labels
     classes = ('plane', 'car', 'bird', 'cat', 'deer', 'dog', 'frog', 'horse', 'ship', 'truck')
@@ -56,13 +60,15 @@ def run_experiment():
     fgsm_attack = FGSM(model, eps=eps_standard)
     pgd_attack = PGD(model, eps=eps_standard, alpha=2/255, steps=10)
 
-    # Run attack evaluation on first batch
+    # Run attack evaluation on test batch
     images, labels = next(iter(test_loader))
     images, labels = images.to(device), labels.to(device)
+    criterion = nn.CrossEntropyLoss(reduction='none')
 
-    # Clean accuracy
+    # Clean accuracy & loss
     with torch.no_grad():
         outputs = model(images)
+        clean_losses = criterion(outputs, labels)
         preds = outputs.argmax(dim=1)
         clean_acc = (preds == labels).float().mean().item()
 
@@ -70,6 +76,7 @@ def run_experiment():
     adv_fgsm = fgsm_attack.generate(images, labels)
     with torch.no_grad():
         outputs_fgsm = model(adv_fgsm)
+        fgsm_losses = criterion(outputs_fgsm, labels)
         preds_fgsm = outputs_fgsm.argmax(dim=1)
         fgsm_acc = (preds_fgsm == labels).float().mean().item()
 
@@ -77,6 +84,7 @@ def run_experiment():
     adv_pgd = pgd_attack.generate(images, labels)
     with torch.no_grad():
         outputs_pgd = model(adv_pgd)
+        pgd_losses = criterion(outputs_pgd, labels)
         preds_pgd = outputs_pgd.argmax(dim=1)
         pgd_acc = (preds_pgd == labels).float().mean().item()
 
@@ -88,10 +96,10 @@ def run_experiment():
     print(f" PGD Accuracy  (eps=8/255): {pgd_acc * 100:.2f}%")
     print("="*50 + "\n")
 
-    # Save visual comparison plots
+    # Save 9 publication-grade visualization plots
     os.makedirs("./results", exist_ok=True)
 
-    # Plot 1 & 2: Single sample comparisons
+    # Plot 1 & 2: Single sample comparison plots
     plot_adversarial_examples(
         images[0], adv_fgsm[0], 
         classes[labels[0].item()], classes[preds_fgsm[0].item()], 
@@ -116,11 +124,32 @@ def run_experiment():
         classes, labels[0].item(), save_path="./results/confidence_bar.png"
     )
 
-    # Plot 5: Robustness Curve across Epsilon range
+    # Plot 5: Confusion Matrix Heatmap
+    plot_confusion_matrix(
+        labels, preds_pgd, classes, 
+        title="Confusion Matrix (PGD Attack @ eps=8/255)", save_path="./results/confusion_matrix.png"
+    )
+
+    # Plot 6: Per-Class Accuracy Breakdown
+    plot_per_class_accuracy(
+        labels, preds, preds_fgsm, preds_pgd, 
+        classes, save_path="./results/per_class_accuracy.png"
+    )
+
+    # Plot 7: Loss Distribution Histogram
+    plot_loss_histogram(
+        clean_losses, fgsm_losses, pgd_losses, save_path="./results/loss_histogram.png"
+    )
+
+    # Plot 8: Perturbation Norms Boxplot (L2 and L-infinity)
+    plot_perturbation_norms(
+        images, adv_fgsm, adv_pgd, save_path="./results/perturbation_norms.png"
+    )
+
+    # Plot 9: Robustness Curve across Epsilon range
     print("[*] Generating Robustness Curve across Epsilon range...")
     epsilons = [0.0, 2/255, 4/255, 8/255, 12/255, 16/255, 24/255]
-    fgsm_curve_accs = []
-    pgd_curve_accs = []
+    fgsm_curve_accs, pgd_curve_accs = [], []
 
     for eps_val in epsilons:
         if eps_val == 0.0:
@@ -142,7 +171,7 @@ def run_experiment():
 
     plot_accuracy_vs_epsilon(epsilons, fgsm_curve_accs, pgd_curve_accs, save_path="./results/accuracy_vs_epsilon.png")
 
-    print("[+] Evaluation complete! All 5 visualization plots saved in ./results/")
+    print("[+] Evaluation complete! All 9 publication-grade visualization plots saved in ./results/")
 
 if __name__ == "__main__":
     run_experiment()
